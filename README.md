@@ -20,6 +20,8 @@ sqoop就是帮助把数据从SQL数据库中导入到HDFS file中。flume做的�
 
 CPU和GPU都是把多个processor放置在chip上，完成计算，但二者的设计目标是不同的。CPU的控制系统更加复杂，目标是高速度、低延迟，相当于跑车。GPU的控制系统更加简单，适合计算简单的重复任务，目标是高通量，相当于大客车。对于机器学习分析数据，追求的是高通量，使用GPU相当合适。由于控制系统简单，GPU的chip上可以放置比CPU多得多的processor（CPU如果放置这么多的processor的话，控制系统根本没法合理安排）。
 
+GPU最初的设计是用来计算处理图像的，图像处理具有这样高通量的特性。当然，除了图像处理，还有机器学习等多种应用需要高通量的特性。GPU之外，还可以设计其他高通量的处理器，比如专门为机器学习优化过的高通量处理器（GPU是专门为图像处理优化的高通量处理器）。
+
 CUDA是GPU的操作系统，就好像hadoop是分布式系统的操作系统一样。可以按CUDA的方式用C语言编写程序，用CUDA compiler编译后，控制GPU的计算。在CUDA编程中，首先设好kernal，是单个thread所要完成的任务，是GPU所要完成的任务。然后设置CPU的host memory，然后把CPU的数据转入GPU中（一般转入global memory，由CPU控制）。之后，由CPU启动kernal。kernal完成计算后，再由CPU把GPU中的数据转到CPU的host memory中。
 
 Parallel programming有多种communication patterns, 前面提到的map和reduce是其中两种，map is one to one, reduce is all to one. Besides, gather is many to one, scatter is one to many. Stencil can be finished by gather or scatter. Transpose is like matrix transpose for an array. 
