@@ -16,6 +16,8 @@ sqoop就是帮助把数据从SQL数据库中导入到HDFS file中。flume做的�
 
 对于计算系统，有三种办法来增加计算力，一是增加单个processor的计算力，二是增加单个chip上processor的数量，三是把多个chip并行起来。单个processor的计算力目前已经进入瓶颈期，增加单个chip上processor的数量是目前的主流，速度还是要比把多个chip并行起来快很多。多核电脑本质上就是在一个cpu chip上配有多个processor. 当然，为了在最大程度上增加计算力，可以把二和三结合起来，既在chip上放置很多的processor，又把多个chip并行起来。
 
+在分布式系统中，可以这样处理：首先是cluster集群的Map。在每台单机上，把HDFS数据库中的数据读入到cpu内存中，然后转入到gpu内存中，经由gpu计算后，再转入到cpu内存中，存入到单机HDFS数据库中。然后是数据交互的MapReduce。把单机HDFS数据库中的数据先处理再归一到一台机器上，呈现最后的结果。
+
 CPU和GPU都是把多个processor放置在chip上，完成计算，但二者的设计目标是不同的。CPU的控制系统更加复杂，目标是高速度、低延迟，相当于跑车。GPU的控制系统更加简单，适合计算简单的重复任务，目标是高通量，相当于大客车。对于机器学习分析数据，追求的是高通量，使用GPU相当合适。由于控制系统简单，GPU的chip上可以放置比CPU多得多的processor（CPU如果放置这么多的processor的话，控制系统根本没法合理安排）。
 
 CUDA是GPU的操作系统，就好像hadoop是分布式系统的操作系统一样。可以按CUDA的方式用C语言编写程序，用CUDA compiler编译后，控制GPU的计算。在CUDA编程中，首先设好kernal，是单个thread所要完成的任务，是GPU所要完成的任务。然后设置CPU的host memory，然后把CPU的数据转入GPU中（一般转入global memory，由CPU控制）。之后，由CPU启动kernal。kernal完成计算后，再由CPU把GPU中的数据转到CPU的host memory中。
