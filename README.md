@@ -1,5 +1,7 @@
 # learn-ParallelProgram
 
+## GPU
+
 与parallel programming相对的是serial programming，前者是并行程序，后者是串行程序。
  
 在服务器前端的serial programming中，可以采取异步的编程方式，也就是程序各部分的结果可以相互独立展示，其中一部分的结果出错不影响整个页面的展示。
@@ -35,3 +37,9 @@ Effieicent GPU programming:
     * coalescing global memory, that is, make adjacent threads access continuous memory
 2. Avoid thread divergence such as branches and loops
     * if different thread execute different loops, we shouldn't let some threads wait for others
+
+
+## CPU
+
+线程比进程功能更强大，适合进行内存等层面的数据交流，进程比线程更安全，对于没有数据交流的线程，把他们放到不同的进程中能保证互不干扰。Queue.Queue的话，适合用于不同线程的数据交流，进行过优化，避免了使用lock机制，数据产生者、Queue.Queue、数据消费者用的都是同一块内存。redis的话，数据产生者可以把数据存入redis，不同的数据产生者相互之间没有干扰（假设存入redis不需要有规定的先后），可以用多进程实现。数据消费者从redis中消费数据，和数据产生者也没有直接的数据交流，可以用单独的进程实现？实际上涉及到三块内存：数据产生者用的内存（分成了很多小块），redis用的内存（从数据产生者用的内存copy而来，要copy到数据消费者用的内存中去），数据消费者用的内存。可以看出来，用Queue.Queue实现，更省内存，效率更高，用redis实现，更费内存，效率更低（多了copy操作），但更加安全。
+
