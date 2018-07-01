@@ -46,8 +46,73 @@ Effieicent GPU programming:
 线程比进程功能更强大，适合进行内存等层面的数据交流，进程比线程更安全，对于没有数据交流的线程，把他们放到不同的进程中能保证互不干扰。Queue.Queue的话，适合用于不同线程的数据交流，进行过优化，避免了使用lock机制，数据产生者、Queue.Queue、数据消费者用的都是同一块内存。redis的话，数据产生者可以把数据存入redis，不同的数据产生者相互之间没有干扰（假设存入redis不需要有规定的先后），可以用多进程实现。数据消费者从redis中消费数据，和数据产生者也没有直接的数据交流，可以用单独的进程实现？实际上涉及到三块内存：数据产生者用的内存（分成了很多小块），redis用的内存（从数据产生者用的内存copy而来，要copy到数据消费者用的内存中去），数据消费者用的内存。可以看出来，用Queue.Queue实现，更省内存，效率更高，用redis实现，更费内存，效率更低（多了copy操作），但更加安全。
 
 网络上的两台电脑：http交互
+
 一个cluster中的多个node：某种通讯方式
+
 多路cpu：是不同的node，不在一块主板上，独特的通讯方式，不能共用一块内存？
+
 多核cpu：一块主板上，主板上的总线通讯，可以共用一块内存
+
 多进程：三块内存，生产者，消费者，中间商
+
 多线程：一块内存，用Queue.Queue来管理内存，或者用代码来主动管理内存
+
+
+在不同进程中的多个线程
+
+在同一进程中的多个线程
+
+在同一个cpu核上运行的多个线程
+
+在不同cpu核上运行的多个线程
+
+两个处于不同进程中的线程肯定是不同的线程，而且互不干扰，不共享内存；从这个意义上讲，多进程肯定是多线程
+
+多线程有两层意思，一是共享内存的多个线程，二是广义上的多个线程，不管是否共享内存
+
+一个线程肯定只能运行在一个cpu核上，不能运行在多个核上
+
+
+Note the distinction between a program and a thread; the program con- tains instructions, whereas the thread consists of the execution of those instructions. Even for single-threaded programs, this distinction matters. If a program contains a loop, then a very short program could give rise to a very long thread of execution. Also, running the same program ten times will give rise to ten threads, all executing one program.
+
+Each thread has a lifetime, extending from the time its first instruc- tion execution occurs until the time of its last instruction execution. If two threads have overlapping lifetimes, we say they are concurrent. 
+
+
+Sequential threads
+
+Concurrent threads running simultaneously on two processors
+
+Concurrent threads (with gaps in their executions) interleaved on one processor（一个thread执行时有I/O，忙着读写，cpu就空下了，这时候就可以运行另一个thread，但过一会儿前一个thread是会回来的）
+
+If the computer hardware includes multiple processors, then it will naturally be possible to run threads concurrently, one per pro- cessor. However, the operating system’s users will often want to run more concurrent threads than the hardware has processors. Therefore, the operating system will need to divide each pro- cessor’s attention between multiple threads. In this introductory textbook I will mostly limit myself to the case of all the threads needing to be run on a single processor. I will explicitly indicate those places where I do address the more general multi-processor case.
+
+Whenever a program initially starts running, the computer carries out the program’s instructions in a single thread. Therefore, if the program is intended to run in multiple threads, the original thread needs at some point to spawn off a child thread that does some actions, while the parent thread continues to do others. (For more than two threads, the program can repeat the thread-creation step.) Most programming languages have an application programming interface (or API) for threads that includes a way to create a child thread. 
+
+Fundamentally, most uses for concurrent threads serve one of two goals:
+Responsiveness: allowingthecomputersystemtorespondquicklytosome- thing external to the system, such as a human user or another com- puter system. Even if one thread is in the midst of a long computation, another thread can respond to the external agent. Our example pro- grams in Section 2.2 illustrated responsiveness: both the parent and the child thread responded to a timer.
+Resource utilization: keeping most of the hardware resources busy most of the time. If one thread has no need for a particular piece of hard- ware, another may be able to make productive use of it.
+
+A third reason why programmers sometimes use concurrent threads is as a tool for modularization. With this, a complex system may be decomposed into a group of interacting threads.
+
+下面这种情况其实适合多进程，不需要共享内存：
+
+In the first case, when you work on a spreadsheet, the two concurrent threads have almost nothing to do with one another, and the op- erating system’s job, beyond allowing them to run concurrently, will mostly consist of isolating each from the other, so that a bug in the web browser doesn’t overwrite part of your spreadsheet, for example. This is generally done by encapsulating the threads in separate protection environments known as processes. (Some systems call processes tasks, while others use task as a synonym for thread.)
+
+下面这种情况适合共享内存、需要调节的多线程，也许也可以用多进程实现，但效率肯定不如多线程高
+
+If, on the other hand, you continue using the browser’s user interface while the download continues, the concurrent threads are closely related parts of a single application, and the operating system need not isolate the threads from one another. However, it may still need to provide mechanisms for regulating their interaction. For example, some coordination between the downloading thread and the user-interface thread is needed to ensure that you can scroll through as much of the page as has been downloaded, but no further. This coordination between threads is known as synchronization.
+
+一个是I/O密集，一个是计算密集
+
+The explanation for the half-hour savings in elapsed time is that the virus scanning program spends most of its time using the disk drive to read files, with only modest bursts of processor activity each time the disk completes a read request, whereas the rendering program spends most of its time doing processing, with very little disk activity. 
+
+Of course, this assumes the operating system’s scheduler is smart enough to let the virus scanner have the processor’s attention (briefly) whenever a disk request completes, rather than making it wait for the rendering program.
+
+
+SP：stack pointer，储存代码栈在内存中的位置
+
+IP：instruction pointer，储存代码执行到什么位置了
+
+The i386 architecture is also known as the x86 or IA-32; it is a popular processor architecture used in standard personal computer processors such as Intel’s Core, Xeon, and Atom families and AMD’s FX and Opteron families.
+
+
