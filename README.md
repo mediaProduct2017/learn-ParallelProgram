@@ -43,7 +43,7 @@ Effieicent GPU programming:
 
 [concurrency](https://github.com/arfu2016/nlp/tree/master/nlp_models/concurrent)
 
-线程比进程功能更强大，适合进行内存等层面的数据交流，进程比线程更安全，对于没有数据交流的线程，把他们放到不同的进程中能保证互不干扰。Queue.Queue的话，适合用于不同线程的数据交流，进行过优化，避免了使用lock机制，数据产生者、Queue.Queue、数据消费者用的都是同一块内存。redis的话，数据产生者可以把数据存入redis，不同的数据产生者相互之间没有干扰（假设存入redis不需要有规定的先后），可以用多进程实现。数据消费者从redis中消费数据，和数据产生者也没有直接的数据交流，可以用单独的进程实现？实际上涉及到三块内存：数据产生者用的内存（分成了很多小块），redis用的内存（从数据产生者用的内存copy而来，要copy到数据消费者用的内存中去），数据消费者用的内存。可以看出来，用Queue.Queue实现，更省内存，效率更高，用redis实现，更费内存，效率更低（多了copy操作），但更加安全。
+线程比进程功能更强大，适合进行内存等层面的数据交流，进程比线程更安全，对于没有数据交流的线程，把他们放到不同的进程中能保证互不干扰。Queue.Queue的话，适合用于不同线程的数据交流，进行过优化，避免了使用lock机制(其实是Queue.Queue帮我们做了lock的事情)，数据产生者、Queue.Queue、数据消费者用的都是同一块内存。redis的话（也可以是其他中间件，比如celery中可用的一系列中间件，如卡夫卡），数据产生者可以把数据存入redis，不同的数据产生者相互之间没有干扰（假设存入redis不需要有规定的先后），可以用多进程实现。数据消费者从redis中消费数据，和数据产生者也没有直接的数据交流，可以用单独的进程实现？实际上涉及到三块内存：数据产生者用的内存（分成了很多小块），redis用的内存（从数据产生者用的内存copy而来，要copy到数据消费者用的内存中去），数据消费者用的内存。可以看出来，用Queue.Queue实现，更省内存，效率更高，用redis实现，更费内存，效率更低（多了copy操作），但更加安全。
 
 网络上的两台电脑：http交互
 
@@ -68,9 +68,9 @@ Effieicent GPU programming:
 
 两个处于不同进程中的线程肯定是不同的线程，而且互不干扰，不共享内存；从这个意义上讲，多进程肯定是多线程
 
-多线程有两层意思，一是共享内存的多个线程，二是广义上的多个线程，不管是否共享内存
+多线程有两层意思，一是共享内存的多个线程，二是广义上的多个线程，不管是否共享内存，有可能存在于多个进程中
 
-一个线程肯定只能运行在一个cpu核上，不能运行在多个核上
+一个线程肯定只能运行在一个cpu核上，不能运行在多个核上；一个进程是一组线程，虽然多个线程可以运行在多个核上，但一个进程一般只运行在一个核上，不会运行在多个核上
 
 
 Note the distinction between a program and a thread; the program con- tains instructions, whereas the thread consists of the execution of those instructions. Even for single-threaded programs, this distinction matters. If a program contains a loop, then a very short program could give rise to a very long thread of execution. Also, running the same program ten times will give rise to ten threads, all executing one program.
@@ -115,4 +115,24 @@ IP：instruction pointer，储存代码执行到什么位置了
 
 The i386 architecture is also known as the x86 or IA-32; it is a popular processor architecture used in standard personal computer processors such as Intel’s Core, Xeon, and Atom families and AMD’s FX and Opteron families.
 
+线程的同步与协调是通过scheduler进行的，有多种协调的方式，不同的方式所追求的目标也是不一样的。多线程相互切换的时间代价比多进程启动与切换要小，但是，对于多线程来说，缓存是共用的，当切换线程时，之前线程的缓存很可能被覆盖掉了，频繁切换的话，基本相当于没有缓存。多个进程之间相互之间内存是独立的，缓存也是相互独立的。
 
+操作系统涉及到不同的线程通信及协调，不同进程的管理。分布式系统涉及到不同IP主机的管理，以及网络通信。
+
+tensorflow中，variable和placeholder一个是变量（可以通过训练而改变，当然也可以设为不变），一个是系数，但是从储存的角度是类似的，只储存一次，其他都是引用。但是对于constant，是实实在在的存储，有可能有多份。
+
+### concurrent.futures.ThreadPoolExecutor (ProcessPoolExecutor)
+
+[concurrent](https://github.com/arfu2016/nlp/tree/master/nlp_models/concurrent)
+
+对于ThreadPoolExecutor(2)，是新开2个子线程，不管主线程是否被阻塞，不管有几个独立任务等待执行，2个子线程是不变的。如果主线程被阻塞（阻塞调用，比如executor.map(), future.result()等，比如time.sleep(1)，比如调用I/O程序或函数），cpu交替执行两个线程（在必要的时候释放GIL锁）。如果主线程没有被阻塞（使用executor.submit()，在future.result()之前，或者使用的是回调函数来返回结果），没有挂起，主线程继续，两个子线程也在跑，cpu交替执行三个线程。
+
+对于ProcessPoolExecutor(2)，是总共有2个进程（可能跑在两个核上，其中一个核上跑着主进程）。假设进程1是主进程，跑着主线程，该进程中往往还有一个新开任务线程1，一个进程下有两个线程，另一个进程是新开进程，一般只跑着一个线程，新开的任务线程2。如果主线程没有被阻塞，没有挂起，不管有几个独立任务在等待执行，都是只有2个新的任务线程在执行，算上主线程，是两个进程、三个线程在执行。如果主线程被阻塞，此时主线程挂起，但是同时，会在主进程中新开一个任务线程3来代替主线程，这时，就有3个新的任务线程在执行，总的来说，还是两个进程、三个线程在执行。
+
+    executor.map()
+    executor.submit()
+    future.as_completed()
+    future.result()
+    future.done()
+    future.add_done_callback()
+    
